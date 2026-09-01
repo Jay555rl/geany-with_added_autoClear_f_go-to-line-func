@@ -107,6 +107,8 @@ static guint file_chooser_get_filter_idx(GtkFileChooser *chooser)
 	return idx;
 }
 
+static void on_dialog_input(const gchar *string, gpointer data);
+
 
 /* sets the current file filter from its ID */
 static void file_chooser_set_filter_idx(GtkFileChooser *chooser, guint idx)
@@ -981,80 +983,124 @@ on_input_dialog_response(GtkDialog *dialog, gint response, InputDialogData *data
 }
 
 
+
+
+
+
+
+
+
+/* =========================================
+ * FEATURE IMPLEMENTATION #4628: Option to Clear Go-To-Line Entry
+ * =========================================*/
+
 /* Create and display an input dialog.
  * persistent: whether to remember previous entry text in a combo box;
- * 	in this case the dialog returned is not destroyed on a response,
- * 	and can be reshown.
+ *      in this case the dialog returned is not destroyed on a response,
+ *      and can be reshown.
+ * remember_check: optional pointer to a boolean; if provided, adds a
+ *      checkbox to toggle saving the entry text for future calls.
  * Returns: the dialog widget. */
+ // BRIGHTCALL
+ // C:\Users\Keems\source\repos\Jay555rl\geanyWorks-buildingGeany\geany\src\dialogs.c
 static GtkWidget *
 dialogs_show_input_full(const gchar *title, GtkWindow *parent,
-						const gchar *label_text, const gchar *default_text,
-						gboolean persistent, GeanyInputCallback input_cb, gpointer input_cb_data,
-						GCallback insert_text_cb, gpointer insert_text_cb_data)
+                        const gchar *label_text, const gchar *default_text,
+                        gboolean persistent, gboolean *remember_check,
+                        GeanyInputCallback input_cb, gpointer input_cb_data,
+                        GCallback insert_text_cb, gpointer insert_text_cb_data)
 {
-	GtkWidget *dialog, *vbox;
-	InputDialogData *data = g_malloc(sizeof *data);
+    GtkWidget *dialog, *vbox;
+    GtkWidget *check_remember = NULL;
+    InputDialogData *data = g_malloc(sizeof *data);
 
-	dialog = gtk_dialog_new_with_buttons(title, parent,
-		GTK_DIALOG_DESTROY_WITH_PARENT, GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
-		GTK_STOCK_OK, GTK_RESPONSE_ACCEPT, NULL);
-	vbox = ui_dialog_vbox_new(GTK_DIALOG(dialog));
-	gtk_widget_set_name(dialog, "GeanyDialog");
-	gtk_box_set_spacing(GTK_BOX(vbox), 6);
+    dialog = gtk_dialog_new_with_buttons(title, parent,
+        GTK_DIALOG_DESTROY_WITH_PARENT, GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
+        GTK_STOCK_OK, GTK_RESPONSE_ACCEPT, NULL);
+    vbox = ui_dialog_vbox_new(GTK_DIALOG(dialog));
+    gtk_widget_set_name(dialog, "GeanyDialog");
+    gtk_box_set_spacing(GTK_BOX(vbox), 6);
 
-	data->combo = NULL;
-	data->entry = NULL;
-	data->callback = input_cb;
-	data->data = input_cb_data;
+    data->combo = NULL;
+    data->entry = NULL;
+    data->callback = input_cb;
+    data->data = input_cb_data;
 
-	if (label_text)
-	{
-		GtkWidget *label = gtk_label_new(label_text);
-		gtk_label_set_line_wrap(GTK_LABEL(label), TRUE);
-		gtk_misc_set_alignment(GTK_MISC(label), 0, 0.5);
-		ui_hookup_widget(dialog, label, "label");
-		gtk_container_add(GTK_CONTAINER(vbox), label);
-	}
+    if (label_text)
+    {
+        GtkWidget *label = gtk_label_new(label_text);
+        gtk_label_set_line_wrap(GTK_LABEL(label), TRUE);
+        gtk_misc_set_alignment(GTK_MISC(label), 0, 0.5);
+        ui_hookup_widget(dialog, label, "label");
+        gtk_container_add(GTK_CONTAINER(vbox), label);
+    }
 
-	if (persistent)	/* remember previous entry text in a combo box */
-	{
-		data->combo = gtk_combo_box_text_new_with_entry();
-		data->entry = gtk_bin_get_child(GTK_BIN(data->combo));
-		ui_entry_add_clear_icon(GTK_ENTRY(data->entry));
-		gtk_container_add(GTK_CONTAINER(vbox), data->combo);
-	}
-	else
-	{
-		data->entry = gtk_entry_new();
-		ui_entry_add_clear_icon(GTK_ENTRY(data->entry));
-		gtk_container_add(GTK_CONTAINER(vbox), data->entry);
-	}
+    if (persistent)    /* remember previous entry text in a combo box */
+    {
+        data->combo = gtk_combo_box_text_new_with_entry();
+        data->entry = gtk_bin_get_child(GTK_BIN(data->combo));
+        ui_entry_add_clear_icon(GTK_ENTRY(data->entry));
+        gtk_container_add(GTK_CONTAINER(vbox), data->combo);
+    }
+    else
+    {
+        data->entry = gtk_entry_new();
+        ui_entry_add_clear_icon(GTK_ENTRY(data->entry));
+        gtk_container_add(GTK_CONTAINER(vbox), data->entry);
+    }
 
-	if (default_text != NULL)
-	{
-		gtk_entry_set_text(GTK_ENTRY(data->entry), default_text);
-	}
-	gtk_entry_set_max_length(GTK_ENTRY(data->entry), 255);
-	gtk_entry_set_width_chars(GTK_ENTRY(data->entry), 30);
+    /* --- FEATURE #4628: OPTIONAL CHECKBOX INJECTION --- */
+    if (remember_check != NULL)
+    {
+        check_remember = gtk_check_button_new_with_mnemonic(_("Remember line number for next time"));
+        gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(check_remember), *remember_check);
+        gtk_container_add(GTK_CONTAINER(vbox), check_remember);
+    }
 
-	if (insert_text_cb != NULL)
-		g_signal_connect(data->entry, "insert-text", insert_text_cb, insert_text_cb_data);
-	g_signal_connect(data->entry, "activate", G_CALLBACK(on_input_entry_activate), dialog);
-	g_signal_connect(dialog, "show", G_CALLBACK(on_input_dialog_show), data->entry);
-	g_signal_connect_data(dialog, "response", G_CALLBACK(on_input_dialog_response), data, CLOSURE_NOTIFY(g_free), 0);
+    if (default_text != NULL)
+    {
+        gtk_entry_set_text(GTK_ENTRY(data->entry), default_text);
+    }
+    gtk_entry_set_max_length(GTK_ENTRY(data->entry), 255);
+    gtk_entry_set_width_chars(GTK_ENTRY(data->entry), 30);
 
-	if (persistent)
-	{
-		/* override default handler */
-		g_signal_connect(dialog, "delete-event", G_CALLBACK(gtk_widget_hide_on_delete), NULL);
-		gtk_widget_show_all(dialog);
-		return dialog;
-	}
-	gtk_widget_show_all(dialog);
-	gtk_dialog_run(GTK_DIALOG(dialog));
-	gtk_widget_destroy(dialog);
-	return NULL;
+    if (insert_text_cb != NULL)
+        g_signal_connect(data->entry, "insert-text", insert_text_cb, insert_text_cb_data);
+    g_signal_connect(data->entry, "activate", G_CALLBACK(on_input_entry_activate), dialog);
+    g_signal_connect(dialog, "show", G_CALLBACK(on_input_dialog_show), data->entry);
+    g_signal_connect_data(dialog, "response", G_CALLBACK(on_input_dialog_response), data, CLOSURE_NOTIFY(g_free), 0);
+
+    if (persistent)
+    {
+        /* override default handler */
+        g_signal_connect(dialog, "delete-event", G_CALLBACK(gtk_widget_hide_on_delete), NULL);
+        gtk_widget_show_all(dialog);
+        return dialog;
+    }
+
+    gtk_widget_show_all(dialog);
+    gtk_dialog_run(GTK_DIALOG(dialog));
+
+    /* --- EXTRACT CHECKBOX VALUE BEFORE DESTROYING DIALOG --- */
+    if (remember_check != NULL && check_remember != NULL)
+    {
+        *remember_check = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(check_remember));
+    }
+
+    gtk_widget_destroy(dialog);
+    return NULL;
 }
+
+
+
+
+
+
+
+
+
+
+
 
 
 /* Remember previous entry text in a combo box.
@@ -1064,7 +1110,15 @@ dialogs_show_input_persistent(const gchar *title, GtkWindow *parent,
 		const gchar *label_text, const gchar *default_text,
 		GeanyInputCallback input_cb, gpointer input_cb_data)
 {
-	return dialogs_show_input_full(title, parent, label_text, default_text, TRUE, input_cb, input_cb_data, NULL, NULL);
+	return dialogs_show_input_full(
+    title, parent, label_text, default_text, 
+    TRUE,            /* 5: persistent */
+    NULL,            /* 6: remember_check (NULL because persistent doesn't use checkbox) */
+    input_cb,        /* 7: input_cb */
+    input_cb_data,   /* 8: input_cb_data */
+    NULL,            /* 9: insert_text_cb */
+    NULL             /* 10: insert_text_cb_data */
+	);
 }
 
 
@@ -1086,9 +1140,17 @@ static void on_dialog_input(const gchar *str, gpointer data)
 GEANY_API_SYMBOL
 gchar *dialogs_show_input(const gchar *title, GtkWindow *parent, const gchar *label_text,
 	const gchar *default_text)
-{
+{	// BRIGHTCALL
 	gchar *dialog_input = NULL;
-	dialogs_show_input_full(title, parent, label_text, default_text, FALSE, on_dialog_input, &dialog_input, NULL, NULL);
+	dialogs_show_input_full(
+		title, parent, label_text, default_text, 
+		FALSE,           /* 5: persistent */
+		NULL,            /* 6: remember_check (NULL because general input doesn't use checkbox) */
+		on_dialog_input, /* 7: input_cb */
+		&dialog_input,   /* 8: input_cb_data */
+		NULL,            /* 9: insert_text_cb */
+		NULL             /* 10: insert_text_cb_data */
+	);
 	return dialog_input;
 }
 
@@ -1096,15 +1158,35 @@ gchar *dialogs_show_input(const gchar *title, GtkWindow *parent, const gchar *la
 /* Note: could be changed to dialogs_show_validated_input with argument for callback. */
 /* Returns: newly allocated copy of the entry text or NULL on cancel.
  * Specialised variant for Goto Line dialog. */
-gchar *dialogs_show_input_goto_line(const gchar *title, GtkWindow *parent, const gchar *label_text,
-	const gchar *default_text)
+ // C:\Users\Keems\source\repos\Jay555rl\geanyWorks-buildingGeany\geany\src\dialogs.c
+ // BRIGHTCALL
+gchar *dialogs_show_input_goto_line(const gchar *title, GtkWindow *parent, const gchar *label_text, const gchar *default_text, gboolean *remember_check)
 {
 	gchar *dialog_input = NULL;
+	
 	dialogs_show_input_full(
-		title, parent, label_text, default_text, FALSE, on_dialog_input, &dialog_input,
-		G_CALLBACK(ui_editable_insert_text_callback), NULL);
+		title, parent, label_text, default_text,
+		FALSE,
+		remember_check,
+		on_dialog_input,
+		&dialog_input,
+		G_CALLBACK(ui_editable_insert_text_callback),
+		NULL
+	);
 	return dialog_input;
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 /**

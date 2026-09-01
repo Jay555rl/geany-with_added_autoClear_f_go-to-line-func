@@ -61,8 +61,9 @@ void dialogs_show_word_count(void);
 
 void dialogs_show_color(gchar *colour);
 
-gchar *dialogs_show_input_goto_line(const gchar *title, GtkWindow *parent,
-	const gchar *label_text, const gchar *default_text);
+// BRIGHTCALL 
+//			.h
+gchar *dialogs_show_input_goto_line(const gchar *title, GtkWindow *parent, const gchar *label_text, const gchar *default_text, gboolean *remember_check);
 
 GtkWidget *dialogs_show_input_persistent(const gchar *title, GtkWindow *parent,
 	const gchar *label_text, const gchar *default_text, GeanyInputCallback input_cb, gpointer input_cb_data);

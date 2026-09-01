@@ -1032,21 +1032,45 @@ void on_find_in_files1_activate(GtkMenuItem *menuitem, gpointer user_data)
 }
 
 
+
+
+
+
+
+// BRIGHTCALL		// ROOT FUNCTION BASE
 void on_go_to_line_activate(GtkMenuItem *menuitem, gpointer user_data)
 {
-	static gchar value[16] = "";
-	gchar *result;
+	//C:\Users\Keems\source\repos\Jay555rl\geanyWorks-buildingGeany\geany\src\callbacks.c
+	
+	static gchar value[16] = ""; // <--- this is the static varriable that holds the line number to simply go to.
+	gchar *result; // gchar becomes result
+	static gboolean remember = TRUE; /* this just allows on_go_to_line_activate() to remember whether we checked or unchecked "remember prev number insertion" next time we recall/open new function session. */
 
 	result = dialogs_show_input_goto_line(
 		_("Go to Line"), GTK_WINDOW(main_widgets.window),
-		_("Enter the line you want to go to:"), value);
+		_("Enter the line you want to go to:"), value, &remember);
+		
 	if (result != NULL)
 	{
 		on_toolbutton_goto_entry_activate(NULL, result, NULL);
 
 		/* remember value for future calls */
-		g_snprintf(value, sizeof(value), "%s", result);
-		g_free(result);
+		
+		
+		if (!remember)
+		{
+			value[0] = '\0';
+		}
+		else
+		{
+			
+			g_snprintf(value, sizeof(value), "%s", result);
+		}
+		
+		
+		
+		// This saves previous numbered entry for next time
+			g_free(result);
 	}
 }
 
