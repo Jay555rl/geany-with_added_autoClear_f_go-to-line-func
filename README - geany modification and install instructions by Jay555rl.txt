@@ -40,7 +40,7 @@ HOW TO INSTALL ONTO A LINUX BASED SYSTEM (Debian / Ubuntu / POSIX):
 To install and run this modified version of Geany on your Linux distribution, follow these straightforward steps in your terminal:
 
 1. Clone this repository to your local machine:
-   git clone https://github.com/jay555rl/geanyWorks-buildingGeany.git
+   git clone https://github.com/jay555rl/geany-with_added_autoClear_f_go-to-line-func.git
 
 2. Navigate into the repository directory:
    cd geanyWorks-buildingGeany
